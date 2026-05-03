@@ -13,25 +13,24 @@ export async function POST(req: NextRequest) {
     const { base64, mimeType } = await req.json()
     if (!base64) return NextResponse.json({ error: "No image provided" }, { status: 400 })
 
+    const imageUrl = `data:${mimeType || "image/jpeg"};base64,${base64}`
+
     const response = await groq.chat.completions.create({
-      model: "meta-llama/llama-4-scout-17b-16e-instruct",
+      model: "meta-llama/llama-4-maverick-17b-128e-instruct",
       messages: [{
         role: "user",
         content: [
-          {
-            type: "image_url",
-            image_url: { url: `data:${mimeType};base64,${base64}` },
-          },
+          { type: "image_url", image_url: { url: imageUrl } },
           {
             type: "text",
-            text: `You are a kitchen ingredient detector. Analyze this image and identify all visible food ingredients.
-Return ONLY a valid JSON array. No markdown, no explanation, nothing else.
+            text: `List all visible food ingredients in this image.
+Return ONLY a valid JSON array, nothing else, no markdown.
 Format: [{"name":"Onion","quantity":"3","unit":"pcs","emoji":"🧅"}]
-If no ingredients are visible, return: []`,
-          },
-        ],
+If no food visible, return: []`
+          }
+        ]
       }],
-      max_tokens: 1000,
+      max_tokens: 800,
     })
 
     const text = response.choices[0]?.message?.content ?? "[]"
@@ -42,7 +41,7 @@ If no ingredients are visible, return: []`,
     const ingredients = JSON.parse(clean.slice(start, end + 1))
     return NextResponse.json({ ingredients })
   } catch (e: any) {
-    console.error("Scan API error:", e.message)
-    return NextResponse.json({ error: e.message || "Scan failed" }, { status: 500 })
+    console.error("Scan error:", e?.message || e)
+    return NextResponse.json({ error: e?.message || "Scan failed" }, { status: 500 })
   }
 }
