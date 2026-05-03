@@ -8,7 +8,7 @@ import Nav from "@/components/Nav"
 import { DashboardSkeleton } from "@/components/Skeleton"
 
 export default function Dashboard() {
-  const { pantry, recipes, preferences } = useStore()
+  const { pantry, recipes, preferences, cookHistory, savedRecipes } = useStore()
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
 
@@ -119,7 +119,27 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div style={{padding:"16px 20px",background:"#1A1A24",border:".5px solid rgba(255,255,255,.07)",borderRadius:14,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        {cookHistory.length > 0 && (
+          <div style={{padding:"16px 20px",background:"#1A1A24",borderRadius:16,border:".5px solid rgba(255,255,255,.07)",marginBottom:12}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+              <div style={{fontSize:12,fontWeight:800,color:"#fff"}}>🍳 Recent Cooking</div>
+              <div style={{fontSize:10,color:"rgba(255,255,255,.3)"}}>{cookHistory.length} sessions</div>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {cookHistory.slice(0,4).map((h,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",borderRadius:10,background:"rgba(255,255,255,.03)"}}>
+                  <span style={{fontSize:18}}>{h.emoji}</span>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,.8)"}}>{h.name}</div>
+                    <div style={{fontSize:9,color:"rgba(255,255,255,.3)"}}>{h.cuisine} · {new Date(h.cookedAt).toLocaleDateString("en-US",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}</div>
+                  </div>
+                  <div style={{fontSize:9,fontWeight:700,color:"rgba(76,175,125,.6)",padding:"2px 8px",borderRadius:20,background:"rgba(76,175,125,.08)"}}>Cooked</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+                <div style={{padding:"16px 20px",background:"#1A1A24",border:".5px solid rgba(255,255,255,.07)",borderRadius:14,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
             <div style={{width:36,height:36,borderRadius:"50%",background:"#FF6B35",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"#fff"}}>{firstName[0].toUpperCase()}</div>
             <div>
