@@ -103,10 +103,11 @@ function ScanPageInner() {
           body: JSON.stringify({base64, mimeType: "image/jpeg"})
         })
         const data = await res.json()
-        const detected: string[] = data.ingredients || []
-        const items = detected.map((name:string) => {
-          const q = QUICK.find(q=>q.n.toLowerCase()===name.toLowerCase())
-          return {name: q?.n||name, emoji: q?.e||"🥗", qty:"1", unit: q?.u||"pcs"}
+        const detected: any[] = data.ingredients || []
+        const items = detected.map((ing:any) => {
+          const name = typeof ing === "string" ? ing : ing.name
+          const q = QUICK.find(q=>q.n.toLowerCase()===(name||"").toLowerCase())
+          return {name: q?.n||name, emoji: ing.emoji||q?.e||"🥗", qty: ing.quantity||"1", unit: ing.unit||q?.u||"pcs"}
         })
         setSelected(s => {
           const existing = new Set(s.map(x=>x.name.toLowerCase()))
