@@ -1,8 +1,34 @@
-'use client'
+"use client"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useStore } from "@/store"
 import Nav from "@/components/Nav"
+
+const HEAT_LABEL: {[k:string]:string} = {
+  high:"🔥 High Heat", medium:"🔶 Medium Heat", low:"🟡 Low Heat", none:"❄️ No Heat"
+}
+const HEAT_COLOR: {[k:string]:string} = {
+  high:"rgba(255,59,48,.15)", medium:"rgba(255,107,53,.1)", low:"rgba(251,191,36,.1)", none:"rgba(255,255,255,.04)"
+}
+
+function inferHeat(instruction: string): string {
+  const t = instruction.toLowerCase()
+  if (t.includes("high heat") || t.includes("fry") || t.includes("sear") || t.includes("boil")) return "high"
+  if (t.includes("medium heat") || t.includes("saute") || t.includes("sauté") || t.includes("simmer")) return "medium"
+  if (t.includes("low heat") || t.includes("slow") || t.includes("warm")) return "low"
+  if (t.includes("chop") || t.includes("cut") || t.includes("mix") || t.includes("add") || t.includes("season")) return "none"
+  return "medium"
+}
+
+function inferTimer(instruction: string, timerSec?: number): number {
+  if (timerSec && timerSec > 0) return timerSec
+  const t = instruction.toLowerCase()
+  if (t.includes("boil")) return 600
+  if (t.includes("fry") || t.includes("sear")) return 300
+  if (t.includes("simmer")) return 480
+  if (t.includes("chop") || t.includes("cut") || t.includes("mix")) return 120
+  return 180
+}
 
 export default function CookPage() {
   const { activeRecipe, cookStep, setCookStep, deductPantryIngredients, addCookHistory } = useStore()
@@ -11,8 +37,8 @@ export default function CookPage() {
     {role:"ai", text:"👋 Hi! I am your AI chef. Ask me about substitutions, timing, or techniques."}
   ])
   const [msg, setMsg] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [secs, setSecs] = useState(0)
+  const [thinking, setThinking] = useState(false)
+  const [timer, setTimer] = useState(0)
   const [running, setRunning] = useState(false)
 
   useEffect(() => {
@@ -20,126 +46,167 @@ export default function CookPage() {
   }, [activeRecipe])
 
   useEffect(() => {
-    let t: any
-    if (running) t = setInterval(() => setSecs(s => s + 1), 1000)
-    return () => clearInterval(t)
-  }, [running])
+    let interval: any
+    if (running && timer > 0) {
+      interval = setInterval(() => setTimer(t => {
+        if (t <= 1) { setRunning(false); return 0 }
+        return t - 1
+      }), 1000)
+    }
+    return () => clearInterval(interval)
+  }, [running, timer])
 
   if (!activeRecipe) return null
 
-  const steps = (activeRecipe?.steps || []).map((s: any, i: number) =>
-    typeof s === "string" ? {number:i+1,title:`Step ${i+1}`,instruction:s} : s
-  )
+  const steps = activeRecipe.steps || []
   const total = steps.length
-  const pct = total > 0 ? Math.round(((cookStep + 1) / total) * 100) : 0
-  const fmt = (s: number) => `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`
+  const step = steps[cookStep]
+  const heat = inferHeat(step?.instruction || "")
+  const stepTimer = inferTimer(step?.instruction || "", step?.timer_seconds)
 
-  async function ask() {
-    const q = msg.trim()
-    if (!q) return
+  function startStepTimer() {
+    setTimer(stepTimer)
+    setRunning(true)
+  }
+
+  function nextStep() {
+    if (cookStep === 0) {
+      if(activeRecipe) addCookHistory(activeRecipe)
+      if(activeRecipe) deductPantryIngredients(activeRecipe.ingredients.map(i=>i.name))
+    }
+    if (cookStep < total - 1) setCookStep(cookStep + 1)
+    else router.push("/recipes")
+    setRunning(false)
+    setTimer(0)
+  }
+
+  const mm = String(Math.floor(timer/60)).padStart(2,"0")
+  const ss = String(timer%60).padStart(2,"0")
+
+  async function sendMsg() {
+    if (!msg.trim()) return
+    const userMsg = msg.trim()
     setMsg("")
-    setChat(c => [...c, {role:"user",text:q}])
-    setLoading(true)
+    setChat(c=>[...c,{role:"user",text:userMsg}])
+    setThinking(true)
     try {
       const res = await fetch("/api/chat", {
         method:"POST",
         headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ question: q, recipe: activeRecipe?.name, step: steps[cookStep]?.instruction })
+        body: JSON.stringify({
+          message: userMsg,
+          recipe: activeRecipe?.name ?? "",
+          step: step?.instruction
+        })
       })
       const data = await res.json()
-      setChat(c => [...c, {role:"bot",text:data.answer||"Let me think about that..."}])
+      setChat(c=>[...c,{role:"ai",text:data.reply||"Sorry, I couldn't answer that."}])
     } catch {
-      setChat(c => [...c, {role:"bot",text:"Having trouble connecting. Try again!"}])
+      setChat(c=>[...c,{role:"ai",text:"Connection error. Try again."}])
     }
-    setLoading(false)
+    setThinking(false)
   }
 
   return (
-    <main style={{minHeight:"100vh",background:"#080810",display:"flex",flexDirection:"column"}}>
+    <main style={{minHeight:"100vh",background:"#080810"}}>
       <Nav />
-      <div style={{display:"flex",alignItems:"center",gap:12,padding:"10px 24px",borderBottom:".5px solid rgba(255,255,255,.07)"}}>
-        <span style={{fontFamily:"monospace",fontSize:16,fontWeight:700,color:"#fff"}}>{fmt(secs)}</span>
-        <button onClick={()=>setRunning(r=>!r)} style={{padding:"4px 12px",borderRadius:8,background:running?"rgba(255,107,53,.15)":"rgba(76,175,125,.15)",color:running?"#FF6B35":"#4CAF7D",fontSize:10,fontWeight:700,border:running?".5px solid rgba(255,107,53,.35)":".5px solid rgba(76,175,125,.35)",cursor:"pointer"}}>
-          {running?"Pause":"Start"}
-        </button>
-        <button onClick={()=>{setSecs(0);setRunning(false)}} style={{padding:"4px 12px",borderRadius:8,background:"#1A1A24",color:"rgba(255,255,255,.3)",fontSize:10,fontWeight:700,border:".5px solid rgba(255,255,255,.08)",cursor:"pointer"}}>Reset</button>
-      </div>
+      <div style={{display:"grid",gridTemplateColumns:"160px 1fr 280px",gap:0,height:"calc(100vh - 45px)"}}>
 
-      <div style={{display:"grid",gridTemplateColumns:"180px 1fr 200px",flex:1,overflow:"hidden"}}>
-
-        <div style={{borderRight:".5px solid rgba(255,255,255,.07)",padding:"16px 14px",overflowY:"auto"}}>
-          <div style={{fontSize:9,fontWeight:700,color:"rgba(255,255,255,.25)",letterSpacing:".07em",textTransform:"uppercase",marginBottom:10}}>Ingredients</div>
-          {(activeRecipe.ingredients||[]).map((ing,i) => (
-            <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"6px 10px",borderRadius:8,background:"#1A1A24",border:".5px solid rgba(255,255,255,.07)",marginBottom:5}}>
-              <span style={{fontSize:10,fontWeight:600,color:"rgba(255,255,255,.7)"}}>{ing.emoji} {ing.name}</span>
-              <span style={{fontSize:10,color:"rgba(255,255,255,.3)"}}>{ing.quantity} {ing.unit}</span>
+        <div style={{padding:"16px 12px",borderRight:".5px solid rgba(255,255,255,.07)",overflowY:"auto"}}>
+          <div style={{fontSize:9,fontWeight:700,color:"rgba(255,255,255,.3)",marginBottom:10,letterSpacing:".08em"}}>INGREDIENTS</div>
+          {activeRecipe.ingredients.map(i=>(
+            <div key={i.name} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"5px 8px",borderRadius:8,background:"rgba(255,255,255,.03)",marginBottom:4}}>
+              <span style={{fontSize:11,color:"rgba(255,255,255,.7)"}}>{i.emoji} {i.name}</span>
+              <span style={{fontSize:9,color:"rgba(255,255,255,.3)"}}>{i.quantity} {i.unit}</span>
             </div>
           ))}
-          <div style={{marginTop:14}}>
-            <div style={{fontSize:9,fontWeight:700,color:"rgba(255,255,255,.25)",letterSpacing:".07em",textTransform:"uppercase",marginBottom:8}}>Nutrition</div>
-            {[["Calories",`${activeRecipe.nutrition?.calories} kcal`],["Protein",`${activeRecipe.nutrition?.protein_g}g`],["Carbs",`${activeRecipe.nutrition?.carbs_g}g`]].map(([k,v])=>(
-              <div key={k} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:".5px solid rgba(255,255,255,.07)",fontSize:10}}>
-                <span style={{color:"rgba(255,255,255,.4)"}}>{k}</span>
-                <span style={{color:"#fff",fontWeight:600}}>{v}</span>
-              </div>
-            ))}
-          </div>
+          <div style={{fontSize:9,fontWeight:700,color:"rgba(255,255,255,.3)",marginTop:14,marginBottom:8,letterSpacing:".08em"}}>NUTRITION</div>
+          {[["Calories",activeRecipe.nutrition?.calories+" kcal"],["Protein",activeRecipe.nutrition?.protein_g+"g"],["Carbs",activeRecipe.nutrition?.carbs_g+"g"]].map(([k,v])=>(
+            <div key={k} style={{display:"flex",justifyContent:"space-between",padding:"3px 0"}}>
+              <span style={{fontSize:10,color:"rgba(255,255,255,.35)"}}>{k}</span>
+              <span style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,.6)"}}>{v}</span>
+            </div>
+          ))}
         </div>
 
-        <div style={{padding:"16px 20px",display:"flex",flexDirection:"column",overflowY:"auto"}}>
-          <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",background:"#1A1A24",borderRadius:12,border:".5px solid rgba(255,255,255,.07)",marginBottom:14}}>
-            <span style={{fontSize:30}}>{activeRecipe.emoji}</span>
+        <div style={{padding:"20px 24px",overflowY:"auto",display:"flex",flexDirection:"column"}}>
+          <div style={{padding:"14px 18px",background:"#1A1A24",borderRadius:14,border:".5px solid rgba(255,255,255,.08)",marginBottom:16,display:"flex",alignItems:"center",gap:14}}>
+            <span style={{fontSize:32}}>{activeRecipe.emoji}</span>
             <div>
-              <div style={{fontSize:14,fontWeight:800,color:"#fff",marginBottom:2}}>{activeRecipe.name}</div>
-              <div style={{fontSize:10,color:"rgba(255,255,255,.35)"}}>⏱ {activeRecipe.time_minutes}m &nbsp; 👥 {activeRecipe.servings} servings &nbsp; 📊 {activeRecipe.difficulty}</div>
+              <div style={{fontSize:15,fontWeight:800,color:"#fff"}}>{activeRecipe.name}</div>
+              <div style={{display:"flex",gap:12,marginTop:4,fontSize:10,color:"rgba(255,255,255,.35)"}}>
+                <span>⏱ {activeRecipe.time_minutes}m</span>
+                <span>👥 {activeRecipe.servings} servings</span>
+                <span>📊 {activeRecipe.difficulty}</span>
+              </div>
+            </div>
+            <div style={{marginLeft:"auto",textAlign:"right"}}>
+              <div style={{fontSize:10,color:"rgba(255,255,255,.3)"}}>Step {cookStep+1} of {total}</div>
+              <div style={{width:80,height:4,background:"rgba(255,255,255,.08)",borderRadius:2,marginTop:4}}>
+                <div style={{width:`${((cookStep+1)/total)*100}%`,height:"100%",background:"#FF6B35",borderRadius:2,transition:"width .3s"}}/>
+              </div>
             </div>
           </div>
-          <div style={{marginBottom:14}}>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"rgba(255,255,255,.3)",marginBottom:6}}>
-              <span>Step {cookStep+1} of {total}</span><span>{pct}%</span>
-            </div>
-            <div style={{height:4,borderRadius:2,background:"#1A1A24",overflow:"hidden"}}>
-              <div style={{width:`${pct}%`,height:"100%",background:"#FF6B35",borderRadius:2,transition:"width .4s"}}/>
-            </div>
-          </div>
-          <div style={{display:"flex",flexDirection:"column",gap:8,flex:1}}>
-            {steps.map((s,i) => {
-              const state = i < cookStep ? "done" : i === cookStep ? "active" : "todo"
-              return (
-                <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",padding:"10px 14px",borderRadius:12,border:".5px solid",background:state==="done"?"rgba(76,175,125,.06)":state==="active"?"rgba(255,107,53,.06)":"#1A1A24",borderColor:state==="done"?"rgba(76,175,125,.2)":state==="active"?"rgba(255,107,53,.4)":"rgba(255,255,255,.07)"}}>
-                  <div style={{width:22,height:22,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,flexShrink:0,background:state==="done"?"rgba(76,175,125,.2)":state==="active"?"#FF6B35":"#12121A",color:state==="done"?"#4CAF7D":state==="active"?"#fff":"rgba(255,255,255,.3)",border:state==="todo"?".5px solid rgba(255,255,255,.08)":"none"}}>
-                    {state==="done"?"✓":i+1}
+
+          {step && (
+            <div style={{flex:1}}>
+              <div style={{padding:"20px 20px",borderRadius:14,background:HEAT_COLOR[heat],border:`.5px solid rgba(255,255,255,.1)`,marginBottom:12}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <div style={{width:28,height:28,borderRadius:"50%",background:"#FF6B35",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:"#fff"}}>{cookStep+1}</div>
+                    <span style={{fontSize:11,fontWeight:700,color:"#fff"}}>{step.title}</span>
                   </div>
-                  <div style={{fontSize:10,lineHeight:1.6,color:state==="done"?"rgba(255,255,255,.35)":state==="active"?"#fff":"rgba(255,255,255,.3)"}}>{s.instruction}</div>
+                  <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                    <span style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.5)"}}>{HEAT_LABEL[heat]}</span>
+                    <span style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,background:"rgba(255,107,53,.15)",color:"#FF6B35"}}>⏱ ~{Math.round(stepTimer/60)}m</span>
+                  </div>
                 </div>
-              )
-            })}
-          </div>
-          <div style={{display:"flex",gap:8,marginTop:14}}>
-            <button onClick={()=>{ if(cookStep===0) router.push("/recipes"); else setCookStep(cookStep-1) }} style={{flex:1,padding:10,borderRadius:10,background:"#1A1A24",border:".5px solid rgba(255,255,255,.07)",fontSize:11,fontWeight:700,color:"rgba(255,255,255,.4)",cursor:"pointer"}}>Back</button>
-            {cookStep < total-1
-              ? <button onClick={()=>setCookStep(cookStep+1)} style={{flex:2,padding:10,borderRadius:10,background:"#FF6B35",color:"#fff",fontSize:11,fontWeight:700,border:"none",cursor:"pointer"}}>Next Step →</button>
-              : <button onClick={()=>{if(activeRecipe) addCookHistory(activeRecipe); deductPantryIngredients((activeRecipe.ingredients||[]).map((i:any)=>i.name));router.push("/recipes")}} style={{flex:2,padding:10,borderRadius:10,background:"#4CAF7D",color:"#fff",fontSize:11,fontWeight:700,border:"none",cursor:"pointer"}}>🎉 Done! Ingredients Updated</button>
-            }
+                <div style={{fontSize:13,color:"rgba(255,255,255,.8)",lineHeight:1.7,marginBottom:16}}>{step.instruction}</div>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <button onClick={startStepTimer} style={{padding:"7px 16px",borderRadius:8,background:running?"rgba(76,175,125,.15)":"#FF6B35",color:running?"#4CAF7D":"#fff",fontSize:11,fontWeight:700,border:running?".5px solid rgba(76,175,125,.3)":"none",cursor:"pointer"}}>
+                    {running ? `⏱ ${mm}:${ss}` : timer > 0 ? `▶ ${mm}:${ss}` : `▶ Start ${Math.round(stepTimer/60)}m Timer`}
+                  </button>
+                  {running && <button onClick={()=>setRunning(false)} style={{padding:"7px 12px",borderRadius:8,background:"rgba(255,255,255,.05)",color:"rgba(255,255,255,.4)",fontSize:11,fontWeight:700,border:".5px solid rgba(255,255,255,.08)",cursor:"pointer"}}>Pause</button>}
+                  {timer===0 && !running && cookStep>0 && <span style={{fontSize:10,color:"rgba(76,175,125,.6)"}}>✓ Timer complete</span>}
+                </div>
+              </div>
+
+              <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                {steps.map((s,i)=>(
+                  <div key={i} onClick={()=>{setCookStep(i);setRunning(false);setTimer(0)}} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:10,background:i===cookStep?"rgba(255,107,53,.08)":i<cookStep?"rgba(76,175,125,.05)":"rgba(255,255,255,.02)",border:i===cookStep?".5px solid rgba(255,107,53,.3)":"none",cursor:"pointer"}}>
+                    <div style={{width:20,height:20,borderRadius:"50%",background:i<cookStep?"#4CAF7D":i===cookStep?"#FF6B35":"rgba(255,255,255,.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:800,color:"#fff",flexShrink:0}}>{i<cookStep?"✓":i+1}</div>
+                    <span style={{fontSize:10,color:i===cookStep?"#fff":i<cookStep?"rgba(76,175,125,.7)":"rgba(255,255,255,.3)",flex:1}}>{s.title}</span>
+                    <span style={{fontSize:9,color:"rgba(255,255,255,.2)"}}>~{Math.round(inferTimer(s.instruction,s.timer_seconds)/60)}m</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{display:"flex",gap:8,marginTop:16}}>
+            <button onClick={()=>{ if(cookStep===0) router.push("/recipes"); else { setCookStep(cookStep-1); setRunning(false); setTimer(0) } }} style={{flex:1,padding:10,borderRadius:10,background:"#1A1A24",border:".5px solid rgba(255,255,255,.07)",fontSize:11,fontWeight:700,color:"rgba(255,255,255,.4)",cursor:"pointer"}}>Back</button>
+            <button onClick={nextStep} style={{flex:2,padding:10,borderRadius:10,background:"#FF6B35",color:"#fff",fontSize:11,fontWeight:700,border:"none",cursor:"pointer"}}>
+              {cookStep < total-1 ? "Next Step →" : "✓ Done Cooking"}
+            </button>
           </div>
         </div>
 
         <div style={{borderLeft:".5px solid rgba(255,255,255,.07)",display:"flex",flexDirection:"column"}}>
           <div style={{padding:"12px 14px",borderBottom:".5px solid rgba(255,255,255,.07)"}}>
             <div style={{fontSize:11,fontWeight:700,color:"#fff"}}>Ask the AI Chef</div>
-            <div style={{fontSize:9,color:"rgba(255,255,255,.3)",marginTop:2}}>Ask anything about this recipe</div>
+            <div style={{fontSize:10,color:"rgba(255,255,255,.3)"}}>Ask anything about this recipe</div>
           </div>
-          <div style={{flex:1,padding:"10px",display:"flex",flexDirection:"column",gap:6,overflowY:"auto"}}>
-            {chat.map((m,i) => (
-              <div key={i} style={{padding:"8px 10px",borderRadius:10,fontSize:10,lineHeight:1.6,background:m.role==="user"?"#FF6B35":m.role==="ai"?"rgba(255,107,53,.08)":"#1A1A24",color:m.role==="user"?"#fff":"rgba(255,255,255,.6)",alignSelf:m.role==="user"?"flex-end":"flex-start",maxWidth:"90%",border:m.role==="ai"?".5px solid rgba(255,107,53,.18)":m.role==="bot"?".5px solid rgba(255,255,255,.07)":"none"}}>
-                {m.text}
+          <div style={{flex:1,overflowY:"auto",padding:"12px 14px",display:"flex",flexDirection:"column",gap:8}}>
+            {chat.map((m,i)=>(
+              <div key={i} style={{padding:"8px 10px",borderRadius:10,background:m.role==="ai"?"#1A1A24":"rgba(255,107,53,.1)",border:m.role==="ai"?".5px solid rgba(255,255,255,.07)":".5px solid rgba(255,107,53,.2)",alignSelf:m.role==="ai"?"flex-start":"flex-end",maxWidth:"90%"}}>
+                <span style={{fontSize:11,color:m.role==="ai"?"rgba(255,255,255,.7)":"#FF6B35",lineHeight:1.5}}>{m.text}</span>
               </div>
             ))}
-            {loading && <div style={{padding:"8px 10px",borderRadius:10,fontSize:10,background:"#1A1A24",color:"rgba(255,255,255,.3)",border:".5px solid rgba(255,255,255,.07)"}}>Thinking...</div>}
+            {thinking && <div style={{padding:"8px 10px",borderRadius:10,background:"#1A1A24",border:".5px solid rgba(255,255,255,.07)",alignSelf:"flex-start"}}><span style={{fontSize:11,color:"rgba(255,255,255,.3)"}}>Thinking...</span></div>}
           </div>
-          <div style={{padding:"8px 10px",borderTop:".5px solid rgba(255,255,255,.07)",display:"flex",gap:6}}>
-            <input value={msg} onChange={e=>setMsg(e.target.value)} onKeyDown={e=>e.key==="Enter"&&ask()} placeholder="Ask anything..." style={{flex:1,padding:"7px 10px",borderRadius:8,background:"#1A1A24",border:".5px solid rgba(255,255,255,.1)",color:"#fff",fontSize:10,outline:"none"}}/>
-            <button onClick={ask} style={{width:30,height:30,borderRadius:8,background:"#FF6B35",color:"#fff",fontSize:13,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>→</button>
+          <div style={{padding:"10px 14px",borderTop:".5px solid rgba(255,255,255,.07)",display:"flex",gap:6}}>
+            <input value={msg} onChange={e=>setMsg(e.target.value)} onKeyDown={e=>e.key==="Enter"&&sendMsg()} placeholder="Ask anything..." style={{flex:1,padding:"8px 10px",borderRadius:8,background:"#1A1A24",border:".5px solid rgba(255,255,255,.1)",color:"#fff",fontSize:11,outline:"none"}}/>
+            <button onClick={sendMsg} style={{padding:"8px 12px",borderRadius:8,background:"#FF6B35",color:"#fff",fontSize:11,fontWeight:700,border:"none",cursor:"pointer"}}>→</button>
           </div>
         </div>
 
