@@ -116,7 +116,7 @@ export default function CookPage() {
             })}
           </div>
           <div style={{display:"flex",gap:8,marginTop:14}}>
-            <button onClick={()=>setCookStep(Math.max(0,cookStep-1))} disabled={cookStep===0} style={{flex:1,padding:10,borderRadius:10,background:"#1A1A24",border:".5px solid rgba(255,255,255,.07)",fontSize:11,fontWeight:700,color:"rgba(255,255,255,.4)",cursor:"pointer"}}>Back</button>
+            <button onClick={()=>{ if(cookStep===0) router.push("/recipes"); else setCookStep(cookStep-1) }} style={{flex:1,padding:10,borderRadius:10,background:"#1A1A24",border:".5px solid rgba(255,255,255,.07)",fontSize:11,fontWeight:700,color:"rgba(255,255,255,.4)",cursor:"pointer"}}>Back</button>
             {cookStep < total-1
               ? <button onClick={()=>setCookStep(cookStep+1)} style={{flex:2,padding:10,borderRadius:10,background:"#FF6B35",color:"#fff",fontSize:11,fontWeight:700,border:"none",cursor:"pointer"}}>Next Step →</button>
               : <button onClick={()=>{if(activeRecipe) addCookHistory(activeRecipe); deductPantryIngredients((activeRecipe.ingredients||[]).map((i:any)=>i.name));router.push("/recipes")}} style={{flex:2,padding:10,borderRadius:10,background:"#4CAF7D",color:"#fff",fontSize:11,fontWeight:700,border:"none",cursor:"pointer"}}>🎉 Done! Ingredients Updated</button>
