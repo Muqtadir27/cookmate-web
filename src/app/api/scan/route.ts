@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     const imageUrl = `data:${mimeType || "image/jpeg"};base64,${base64}`
 
     const response = await groq.chat.completions.create({
-      model: "meta-llama/llama-4-maverick-17b-128e-instruct",
+      model: "llama-3.2-11b-vision-preview",
       messages: [{
         role: "user",
         content: [

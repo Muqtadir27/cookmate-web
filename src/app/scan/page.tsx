@@ -88,13 +88,19 @@ function ScanPageInner() {
     const file = e.target.files?.[0]
     if (!file) return
     setScanning(true)
-    const reader = new FileReader()
-    reader.onload = async () => {
-      const base64 = (reader.result as string).split(",")[1]
+    const img = new Image()
+    img.onload = async () => {
+      const MAX = 768
+      const ratio = Math.min(MAX / img.width, MAX / img.height, 1)
+      const canvas = document.createElement("canvas")
+      canvas.width = Math.round(img.width * ratio)
+      canvas.height = Math.round(img.height * ratio)
+      canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height)
+      const base64 = canvas.toDataURL("image/jpeg", 0.75).split(",")[1]
       try {
         const res = await fetch("/api/scan", {
           method:"POST", headers:{"Content-Type":"application/json"},
-          body: JSON.stringify({base64, mimeType: file.type})
+          body: JSON.stringify({base64, mimeType: "image/jpeg"})
         })
         const data = await res.json()
         const detected: string[] = data.ingredients || []
@@ -109,7 +115,7 @@ function ScanPageInner() {
       } catch { alert("Scan failed. Try manual mode.") }
       setScanning(false)
     }
-    reader.readAsDataURL(file)
+    img.src = URL.createObjectURL(file)
   }
 
   function toggle(name: string, emoji: string, defUnit: string) {
