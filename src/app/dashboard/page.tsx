@@ -15,9 +15,9 @@ export default function Dashboard() {
   const [user, setUser] = useState<any>(null)
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) router.push("/auth/login")
-      else setUser(data.user)
+    supabase.auth.getSession().then(({ data }) => {
+      if (!data.session?.user) router.push("/auth/login")
+      else setUser(data.session.user)
     })
   }, [])
 

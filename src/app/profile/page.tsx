@@ -21,9 +21,9 @@ export default function ProfilePage() {
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) router.push("/auth/login")
-      else setUser(data.user)
+    supabase.auth.getSession().then(({ data }) => {
+      if (!data.session?.user) router.push("/auth/login")
+      else setUser(data.session.user)
     })
     if (preferences) {
       if (preferences.cuisines?.length) setCuisines(preferences.cuisines)
