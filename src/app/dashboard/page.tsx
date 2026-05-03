@@ -6,9 +6,11 @@ import { supabase } from "@/lib/supabase"
 import { useStore } from "@/store"
 import Nav from "@/components/Nav"
 import { DashboardSkeleton } from "@/components/Skeleton"
+import OnboardingModal from "@/components/OnboardingModal"
 
 export default function Dashboard() {
   const { pantry, recipes, preferences, cookHistory, savedRecipes } = useStore()
+  const [showOnboarding, setShowOnboarding] = useState(!preferences.cuisines?.length || preferences.cuisines.length === 0)
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
 
@@ -20,6 +22,7 @@ export default function Dashboard() {
   }, [])
 
   if (!user) return <DashboardSkeleton />
+  if (showOnboarding) return <OnboardingModal onDone={()=>setShowOnboarding(false)} />
 
   const firstName = user.user_metadata?.full_name?.split(" ")[0] || user.email?.split("@")[0] || "Chef"
   const hour = new Date().getHours()
