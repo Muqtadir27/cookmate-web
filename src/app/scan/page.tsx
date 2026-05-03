@@ -153,22 +153,13 @@ function ScanPageInner() {
         </div>
 
         <div style={{display:"flex",gap:4,padding:4,borderRadius:12,background:"#1A1A24",border:".5px solid rgba(255,255,255,.07)",marginBottom:20,width:"fit-content"}}>
-          <button onClick={()=>{setMode("camera");stopCamera()}} style={{padding:"8px 20px",borderRadius:9,background:mode==="camera"?"#FF6B35":"transparent",color:mode==="camera"?"#fff":"rgba(255,255,255,.4)",fontSize:11,fontWeight:700,border:"none",cursor:"pointer"}}>📸 Camera Scan</button>
+          <button onClick={()=>{setMode("camera");stopCamera()}} style={{padding:"8px 20px",borderRadius:9,background:mode==="camera"?"#FF6B35":"transparent",color:mode==="camera"?"#fff":"rgba(255,255,255,.4)",fontSize:11,fontWeight:700,border:"none",cursor:"pointer"}}>📤 Upload Photo</button>
           <button onClick={()=>{setMode("manual");stopCamera()}} style={{padding:"8px 20px",borderRadius:9,background:mode==="manual"?"#FF6B35":"transparent",color:mode==="manual"?"#fff":"rgba(255,255,255,.4)",fontSize:11,fontWeight:700,border:"none",cursor:"pointer"}}>✏️ Type Manually</button>
         </div>
 
         {mode==="camera" ? (
           <div style={{borderRadius:14,background:"#1A1A24",border:".5px solid rgba(255,255,255,.07)",marginBottom:20,overflow:"hidden"}}>
-            {camActive ? (
-              <div style={{position:"relative"}}>
-                <video ref={videoRef} style={{width:"100%",maxHeight:320,objectFit:"cover",display:"block"}} autoPlay muted playsInline/>
-                <canvas ref={canvasRef} style={{display:"none"}}/>
-                <div style={{position:"absolute",bottom:12,left:0,right:0,display:"flex",justifyContent:"center",gap:10}}>
-                  <button onClick={captureAndScan} style={{padding:"10px 24px",borderRadius:10,background:"#FF6B35",color:"#fff",fontSize:12,fontWeight:700,border:"none",cursor:"pointer"}}>📸 Capture & Scan</button>
-                  <button onClick={stopCamera} style={{padding:"10px 16px",borderRadius:10,background:"rgba(0,0,0,.6)",color:"#fff",fontSize:12,fontWeight:700,border:".5px solid rgba(255,255,255,.2)",cursor:"pointer"}}>✕</button>
-                </div>
-              </div>
-            ) : scanning ? (
+            {scanning ? (
               <div style={{padding:"40px 20px",textAlign:"center"}}>
                 <div style={{fontSize:32,marginBottom:10}}>🔍</div>
                 <div style={{fontSize:13,fontWeight:700,color:"#fff",marginBottom:4}}>AI is scanning your image...</div>
@@ -176,16 +167,13 @@ function ScanPageInner() {
               </div>
             ) : (
               <div style={{padding:"32px 20px",textAlign:"center"}}>
-                <div style={{fontSize:36,marginBottom:8}}>📸</div>
-                <div style={{fontSize:14,fontWeight:700,color:"#fff",marginBottom:4}}>Scan your fridge or pantry</div>
+                <div style={{fontSize:36,marginBottom:8}}>📤</div>
+                <div style={{fontSize:14,fontWeight:700,color:"#fff",marginBottom:4}}>Upload a photo of your fridge</div>
                 <div style={{fontSize:11,color:"rgba(255,255,255,.35)",marginBottom:16}}>AI identifies every ingredient automatically</div>
-                <div style={{display:"flex",justifyContent:"center",gap:10}}>
-                  <button onClick={startCamera} style={{padding:"9px 20px",borderRadius:10,background:"#FF6B35",color:"#fff",fontSize:11,fontWeight:700,border:"none",cursor:"pointer"}}>📷 Open Camera</button>
-                  <label style={{padding:"9px 20px",borderRadius:10,background:"#1A1A24",color:"rgba(255,255,255,.5)",fontSize:11,fontWeight:700,border:".5px solid rgba(255,255,255,.08)",cursor:"pointer"}}>
-                    🖼 Upload Photo
-                    <input type="file" accept="image/*" onChange={handleFileUpload} style={{display:"none"}}/>
-                  </label>
-                </div>
+                <label style={{display:"inline-block",padding:"10px 24px",borderRadius:10,background:"#FF6B35",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                  Choose Photo
+                  <input type="file" accept="image/*" style={{display:"none"}} onChange={handleFileUpload}/>
+                </label>
               </div>
             )}
           </div>
