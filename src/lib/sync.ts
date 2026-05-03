@@ -55,9 +55,7 @@ export async function syncToCloud(userId: string) {
 
 // PULL Supabase → local store
 export async function syncFromCloud(userId: string) {
-  const { addPantryItems, saveRecipe, setPreferences, resetStore } = useStore.getState()
-
-  resetStore()
+  const { addPantryItems, saveRecipe, setPreferences } = useStore.getState()
 
   // Pantry
   const { data: pantryData } = await supabase
