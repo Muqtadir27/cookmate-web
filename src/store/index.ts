@@ -1,5 +1,11 @@
 "use client"
 import { create } from "zustand"
+import { syncToCloud, getUserId } from "@/lib/sync"
+
+async function bgSync() {
+  const id = await getUserId()
+  if (id) syncToCloud(id).catch(console.error)
+}
 import { persist, createJSONStorage } from "zustand/middleware"
 
 export interface PantryItem {
@@ -78,14 +84,14 @@ export const useStore = create<Store>()(
       ...defaultState,
       setLoading: (v) => set({ loading: v }),
       setServings: (n) => set({ servings: n }),
-      setPreferences: (p) => set({ preferences: p }),
+      setPreferences: (p) => { set({ preferences: p }); bgSync() },
       resetStore: () => set(defaultState),
-      addPantryItem: (item) => set((s) => ({
+      addPantryItem: (item) => { set((s) => ({
         pantry: s.pantry.find(i => i.name.toLowerCase() === item.name.toLowerCase())
           ? s.pantry.map(i => i.name.toLowerCase() === item.name.toLowerCase() ? {...i, quantity: item.quantity, unit: item.unit} : i)
           : [...s.pantry, item]
-      })),
-      addPantryItems: (items) => set((s) => {
+      })); bgSync() },
+      addPantryItems: (items) => { set((s) => {
         let pantry = [...s.pantry]
         for (const item of items) {
           const idx = pantry.findIndex(i => i.name.toLowerCase() === item.name.toLowerCase())
@@ -93,7 +99,7 @@ export const useStore = create<Store>()(
           else pantry.push(item)
         }
         return { pantry }
-      }),
+      }); bgSync() },
       updatePantryItem: (id, qty, unit) => set((s) => ({
         pantry: s.pantry.map(i => i.id === id ? {...i, quantity: qty, unit} : i)
       })),
@@ -107,12 +113,12 @@ export const useStore = create<Store>()(
           return i
         }).filter(Boolean) as any
       })),
-      removePantryItem: (id) => set((s) => ({ pantry: s.pantry.filter(i => i.id !== id) })),
+      removePantryItem: (id) => { set((s) => ({ pantry: s.pantry.filter(i => i.id !== id) })); bgSync() },
       clearPantry: () => set({ pantry: [] }),
-      rateRecipe: (id, rating) => set((s) => ({ ratedRecipes: {...s.ratedRecipes, [id]: rating} })),
+      rateRecipe: (id, rating) => { set((s) => ({ ratedRecipes: {...s.ratedRecipes, [id]: rating} })); bgSync() },
       addCookHistory: (r) => set((s) => ({ cookHistory: [{id:r.id,name:r.name,emoji:r.emoji,cuisine:r.cuisine,cookedAt:new Date().toISOString()},...s.cookHistory].slice(0,50) })),
-      saveRecipe: (r) => set((s) => ({ savedRecipes: s.savedRecipes.find(x=>x.id===r.id) ? s.savedRecipes : [...s.savedRecipes, r] })),
-      unsaveRecipe: (id) => set((s) => ({ savedRecipes: s.savedRecipes.filter(x=>x.id!==id) })),
+      saveRecipe: (r) => { set((s) => ({ savedRecipes: s.savedRecipes.find(x=>x.id===r.id) ? s.savedRecipes : [...s.savedRecipes, r] })); bgSync() },
+      unsaveRecipe: (id) => { set((s) => ({ savedRecipes: s.savedRecipes.filter(x=>x.id!==id) })); bgSync() },
       setRecipes: (recipes) => set({ recipes }),
       setActiveRecipe: (r) => set({ activeRecipe: r, cookStep: 0 }),
       setCookStep: (n) => set({ cookStep: n }),
