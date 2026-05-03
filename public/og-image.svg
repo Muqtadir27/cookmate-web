@@ -1,0 +1,16 @@
+<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="#080810"/>
+  <rect x="0" y="0" width="1200" height="630" fill="url(#g)"/>
+  <defs>
+    <radialGradient id="g" cx="30%" cy="50%">
+      <stop offset="0%" stop-color="#FF6B35" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#080810" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect x="80" y="220" width="6" height="80" rx="3" fill="#FF6B35"/>
+  <text font-family="system-ui,sans-serif" font-size="72" font-weight="900" fill="white" x="110" y="290">CookMate AI</text>
+  <text font-family="system-ui,sans-serif" font-size="28" fill="rgba(255,255,255,0.5)" x="112" y="340">Scan ingredients. Cook anything.</text>
+  <rect x="112" y="375" width="160" height="44" rx="10" fill="#FF6B35"/>
+  <text font-family="system-ui,sans-serif" font-size="18" font-weight="700" fill="white" x="192" y="403" text-anchor="middle">Get Started Free</text>
+  <text font-family="system-ui,sans-serif" font-size="48" x="980" y="330" text-anchor="middle">🍳</text>
+</svg>
