@@ -121,6 +121,10 @@ export default function CookbookPage() {
                       <div style={{padding:"12px 14px"}}>
                         <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:8}}>
                           <span style={{fontSize:28}}>{r.emoji}</span>
+                          <div style={{display:"flex",gap:4,marginLeft:6}} onClick={e=>e.stopPropagation()}>
+                            <button onClick={()=>rateRecipe(r.id,1)} style={{padding:"3px 8px",borderRadius:8,fontSize:12,background:ratedRecipes[r.id]===1?"rgba(76,175,125,.2)":"rgba(255,255,255,.05)",border:ratedRecipes[r.id]===1?".5px solid rgba(76,175,125,.4)":".5px solid rgba(255,255,255,.08)",cursor:"pointer"}}>👍</button>
+                            <button onClick={()=>rateRecipe(r.id,-1)} style={{padding:"3px 8px",borderRadius:8,fontSize:12,background:ratedRecipes[r.id]===-1?"rgba(255,59,48,.2)":"rgba(255,255,255,.05)",border:ratedRecipes[r.id]===-1?".5px solid rgba(255,59,48,.4)":".5px solid rgba(255,255,255,.08)",cursor:"pointer"}}>👎</button>
+                          </div>
                           <div style={{display:"flex",gap:5,alignItems:"center"}}>
                             {canMake
                               ? <span style={{fontSize:9,fontWeight:700,padding:"2px 8px",borderRadius:6,background:"rgba(76,175,125,.15)",color:"#4CAF7D",border:".5px solid rgba(76,175,125,.35)"}}>Ready</span>
@@ -221,6 +225,10 @@ export default function CookbookPage() {
                         <div style={{padding:"12px 14px"}}>
                           <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:8}}>
                             <span style={{fontSize:28}}>{r.emoji}</span>
+                          <div style={{display:"flex",gap:4,marginLeft:6}} onClick={e=>e.stopPropagation()}>
+                            <button onClick={()=>rateRecipe(r.id,1)} style={{padding:"3px 8px",borderRadius:8,fontSize:12,background:ratedRecipes[r.id]===1?"rgba(76,175,125,.2)":"rgba(255,255,255,.05)",border:ratedRecipes[r.id]===1?".5px solid rgba(76,175,125,.4)":".5px solid rgba(255,255,255,.08)",cursor:"pointer"}}>👍</button>
+                            <button onClick={()=>rateRecipe(r.id,-1)} style={{padding:"3px 8px",borderRadius:8,fontSize:12,background:ratedRecipes[r.id]===-1?"rgba(255,59,48,.2)":"rgba(255,255,255,.05)",border:ratedRecipes[r.id]===-1?".5px solid rgba(255,59,48,.4)":".5px solid rgba(255,255,255,.08)",cursor:"pointer"}}>👎</button>
+                          </div>
                             <button onClick={e=>{e.stopPropagation();saved?unsaveRecipe(r.id):saveRecipe(r)}} style={{fontSize:9,fontWeight:700,padding:"3px 10px",borderRadius:6,background:saved?"rgba(76,175,125,.15)":"rgba(255,107,53,.1)",color:saved?"#4CAF7D":"#FF6B35",border:saved?".5px solid rgba(76,175,125,.35)":".5px solid rgba(255,107,53,.3)",cursor:"pointer"}}>
                               {saved?"Saved":"+ Save"}
                             </button>
