@@ -124,14 +124,13 @@ export const useStore = create<Store>()(
 export function switchUserStore(userId: string | null) {
   if (typeof window === "undefined") return
   const key = userId ? `cookmate-v2-${userId}` : "cookmate-v2-guest"
+  const currentKey = useStore.persist.getOptions().name
+  if (currentKey === key) return
   const stored = localStorage.getItem(key)
   useStore.persist.setOptions({ name: key })
-  useStore.persist.clearStorage()
   if (stored) {
     useStore.persist.rehydrate()
   } else {
     useStore.getState().resetStore()
   }
-  useStore.persist.setOptions({ name: key })
-  useStore.persist.rehydrate()
 }

@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
       model: "llama-3.3-70b-versatile",
       messages: [{
         role: "user",
-        content: `You are a world-class chef. Generate 9 authentic, popular ${cuisine} ${category} dishes from around the world.
+        content: `You are a world-class chef. Generate 6 authentic, popular ${cuisine} ${category} dishes from around the world.
 DIETARY RULE: ${dietRule}
 RULES:
 - Real, well-known dishes from ${cuisine} cuisine
@@ -51,7 +51,7 @@ RULES:
   "tips": ["authentic tip"]
 }]`
       }],
-      max_tokens: 5000,
+      max_tokens: 2500,
     })
 
     const text = response.choices[0]?.message?.content ?? "[]"
