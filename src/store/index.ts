@@ -37,6 +37,7 @@ interface Store {
   loading: boolean
   servings: number
   preferences: {cuisines:string[],dietary:string,spice:string,servings:number}
+  ratedRecipes: {[id:string]: 1|-1}
   cookHistory: {id:string,name:string,emoji:string,cuisine:string,cookedAt:string}[]
   savedRecipes: Recipe[]
   setLoading: (v: boolean) => void
@@ -48,6 +49,7 @@ interface Store {
   deductPantryIngredients: (ingredientNames: string[]) => void
   removePantryItem: (id: string) => void
   clearPantry: () => void
+  rateRecipe: (id: string, rating: 1|-1) => void
   addCookHistory: (r: Recipe) => void
   saveRecipe: (r: Recipe) => void
   unsaveRecipe: (id: string) => void
@@ -58,6 +60,7 @@ interface Store {
 }
 
 const defaultState = {
+  ratedRecipes: {} as {[id:string]: 1|-1},
   pantry: [],
   cookHistory: [],
   savedRecipes: [],
@@ -106,6 +109,7 @@ export const useStore = create<Store>()(
       })),
       removePantryItem: (id) => set((s) => ({ pantry: s.pantry.filter(i => i.id !== id) })),
       clearPantry: () => set({ pantry: [] }),
+      rateRecipe: (id, rating) => set((s) => ({ ratedRecipes: {...s.ratedRecipes, [id]: rating} })),
       addCookHistory: (r) => set((s) => ({ cookHistory: [{id:r.id,name:r.name,emoji:r.emoji,cuisine:r.cuisine,cookedAt:new Date().toISOString()},...s.cookHistory].slice(0,50) })),
       saveRecipe: (r) => set((s) => ({ savedRecipes: s.savedRecipes.find(x=>x.id===r.id) ? s.savedRecipes : [...s.savedRecipes, r] })),
       unsaveRecipe: (id) => set((s) => ({ savedRecipes: s.savedRecipes.filter(x=>x.id!==id) })),

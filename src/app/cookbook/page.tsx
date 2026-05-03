@@ -13,7 +13,7 @@ const DIETS = ["All","Vegetarian","Vegan","Non-Veg"]
 const TABS = ["My Cookbook","Discover"]
 
 export default function CookbookPage() {
-  const { savedRecipes, unsaveRecipe, saveRecipe, pantry, setActiveRecipe } = useStore()
+  const { savedRecipes, unsaveRecipe, saveRecipe, pantry, setActiveRecipe, rateRecipe, ratedRecipes } = useStore()
   const router = useRouter()
 
   const [tab, setTab] = useState(0)
